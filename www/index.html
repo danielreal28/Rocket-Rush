@@ -416,8 +416,32 @@ function showPhaseAlert(label, colors){
   setTimeout(()=>{ el.style.display='none'; }, 2000);
 }
 
+// ===================== ORIENTATION LOCK =====================
+function lockLandscape(){
+  try{
+    if(screen.orientation && screen.orientation.lock){
+      screen.orientation.lock('landscape').catch(()=>{});
+    } else if(screen.lockOrientation){
+      screen.lockOrientation('landscape');
+    } else if(screen.mozLockOrientation){
+      screen.mozLockOrientation('landscape');
+    } else if(screen.msLockOrientation){
+      screen.msLockOrientation('landscape');
+    }
+  }catch(e){}
+}
+function unlockOrientation(){
+  try{
+    if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+    else if(screen.unlockOrientation) screen.unlockOrientation();
+    else if(screen.mozUnlockOrientation) screen.mozUnlockOrientation();
+    else if(screen.msUnlockOrientation) screen.msUnlockOrientation();
+  }catch(e){}
+}
+
 // ===================== START GAME =====================
 function startGame(){
+  lockLandscape();
   document.getElementById('worldSelect').style.display='none';
   document.getElementById('gameOver').style.display='none';
   document.getElementById('worldComplete').style.display='none';
@@ -425,7 +449,7 @@ function startGame(){
 
   currentWorld=WORLDS[selectedWorld]; goalDistance=currentWorld.goal;
   player=createPlayer(); obstacles=[];coins=[];powerups=[];particles=[];
-  distance=0;totalCoins=0;speed=3.5;frame=0;boosting=false;
+  distance=0;totalCoins=0;speed=2.2;frame=0;boosting=false;
   activePowers={};
   lastPhaseIdx=0;
   coinMilestone=100;
@@ -453,6 +477,7 @@ function startGame(){
 function retryGame(){startGame();}
 function showWorldSelect(){
   if(animId)cancelAnimationFrame(animId); stopMusic(); gameState='menu';
+  unlockOrientation();
   document.getElementById('worldSelect').style.display='flex';
   document.getElementById('gameOver').style.display='none';
   document.getElementById('worldComplete').style.display='none';
@@ -468,7 +493,7 @@ function showWorldSelect(){
 function loop(){if(gameState!=='playing')return;animId=requestAnimationFrame(loop);frame++;update();render();}
 
 function update(){
-  speed=3.5+distance*0.0028;
+  speed=2.2+distance*0.0016;
   const slow=activePowers.slow>0;
   const effSpeed=slow?speed*0.45:speed;
 
