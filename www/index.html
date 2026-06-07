@@ -345,23 +345,23 @@ function buildObstacle(){
   const obsType = typeRoll < 0.33 ? 'vertical' : typeRoll < 0.66 ? 'horizontal' : 'diagonal75';
 
   if(obsType==='vertical'){
-    // === VERTICAL WALL PAIR — slim ===
-    const BAR_W = 28 + Math.random()*18;   // slim: 28–46px
-    const gap   = H * 0.38;               // generous gap
+    // === VERTICAL WALL PAIR — más pequeño ===
+    const BAR_W = 14 + Math.random()*10;   // 14–24px (antes 28–46px)
+    const gap   = H * 0.52;               // hueco más grande (antes 0.38)
     const mid   = safeTop + safeH*0.2 + Math.random()*safeH*0.6;
     const topH  = mid - gap/2 - safeTop;
     const botY  = mid + gap/2;
     const botH  = safeBot - botY;
     const obs=[];
-    if(topH>30) obs.push({x:W+20, y:safeTop,  w:BAR_W, h:topH, type:'vertical', angle:0});
-    if(botH>30) obs.push({x:W+20, y:botY,      w:BAR_W, h:botH, type:'vertical', angle:0});
-    return obs.length ? obs : [{x:W+20,y:H/2-60,w:BAR_W,h:120,type:'vertical',angle:0}];
+    if(topH>20) obs.push({x:W+20, y:safeTop,  w:BAR_W, h:topH, type:'vertical', angle:0});
+    if(botH>20) obs.push({x:W+20, y:botY,      w:BAR_W, h:botH, type:'vertical', angle:0});
+    return obs.length ? obs : [{x:W+20,y:H/2-40,w:BAR_W,h:80,type:'vertical',angle:0}];
   }
 
   if(obsType==='horizontal'){
-    // === HORIZONTAL BAR — slim ===
-    const barH  = 28 + Math.random()*22;   // slim: 28–50px tall
-    const barLen= W*0.14 + Math.random()*W*0.12;  // moderate length: 14–26% screen
+    // === HORIZONTAL BAR — más pequeño ===
+    const barH  = 14 + Math.random()*12;         // 14–26px (antes 28–50px)
+    const barLen= W*0.07 + Math.random()*W*0.07; // 7–14% pantalla (antes 14–26%)
     const onFloor   = Math.random()>0.45;
     const onCeiling = !onFloor && Math.random()>0.5;
     let y;
@@ -371,9 +371,9 @@ function buildObstacle(){
     return [{x:W+20, y, w:barLen, h:barH, type:'horizontal', angle:0, onFloor, onCeiling}];
   }
 
-  // === DIAGONAL 75-DEGREE BAR — slim ===
-  const BAR_W  = 30 + Math.random()*20;   // slim thickness: 30–50px
-  const BAR_LEN= H*0.45 + Math.random()*H*0.2;  // length stays tall but thinner feel
+  // === DIAGONAL 75-DEGREE BAR — más pequeño ===
+  const BAR_W  = 14 + Math.random()*12;        // 14–26px (antes 30–50px)
+  const BAR_LEN= H*0.22 + Math.random()*H*0.12; // más corto (antes 0.45–0.65)
   const cy     = safeTop + safeH*0.2 + Math.random()*safeH*0.6;
   return [{
     x: W+40, y: cy,
@@ -550,7 +550,7 @@ function update(){
   document.getElementById('progressFill').style.width=Math.min(100,distance/goalDistance*100)+'%';
   if(distance>=goalDistance){win();return;}
 
-  const spawnRate=Math.max(70,120-Math.floor(distance/100));
+  const spawnRate=Math.max(140,220-Math.floor(distance/100));
   if(frame%spawnRate===0) buildObstacle().forEach(o=>obstacles.push(o));
   if(frame%75===38) spawnCoins(W+20).forEach(c=>coins.push(c));
   if(frame%280===140) powerups.push(spawnPowerup(W+30));
