@@ -214,12 +214,16 @@ let bestScores     = JSON.parse(localStorage.getItem('rr_best')     || '{}');
 
 // ===================== AUDIO =====================
 let audioCtx, bgNodes = [], musicRunning = false;
+let midMusicTriggered = false;  // controla el cambio de música a mitad
+
 function getAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
-function startMusic(baseNote) {
+
+// Música estilo 1 — la original (tranquila/espacial)
+function startMusicStyle1(baseNote) {
   stopMusic();
   try {
     const ctx = getAudio(); musicRunning = true;
@@ -240,6 +244,41 @@ function startMusic(baseNote) {
     rhythm();
   } catch(e){}
 }
+
+// Música estilo 2 — más intensa/épica para la segunda mitad
+function startMusicStyle2(baseNote) {
+  stopMusic();
+  try {
+    const ctx = getAudio(); musicRunning = true;
+    const master = ctx.createGain(); master.gain.value = 0.2; master.connect(ctx.destination); bgNodes.push(master);
+    // Bajo pulsante más agresivo
+    const bass = ctx.createOscillator(), bassG = ctx.createGain();
+    bass.type='sawtooth'; bass.frequency.value=baseNote*0.5; bassG.gain.value=0.4;
+    bass.connect(bassG); bassG.connect(master); bass.start(); bgNodes.push(bass,bassG);
+    // Melodía rápida
+    const mel = ctx.createOscillator(), melG = ctx.createGain();
+    mel.type='square'; mel.frequency.value=baseNote*1.5; melG.gain.value=0.2;
+    mel.connect(melG); melG.connect(master); mel.start(); bgNodes.push(mel,melG);
+    const scale2=[1,1.2,1.5,1.8,2,1.8,1.5,1.2,1,0.9,0.75,0.9]; let step=0;
+    function tick2(){if(!musicRunning)return;const t=ctx.currentTime;mel.frequency.setTargetAtTime(baseNote*1.5*scale2[step%scale2.length],t,0.03);melG.gain.setValueAtTime(0.35,t);melG.gain.exponentialRampToValueAtTime(0.1,t+0.2);step++;setTimeout(tick2,250);}
+    tick2();
+    // Bombo rítmico
+    function kick(){
+      if(!musicRunning)return;
+      try{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(160,ctx.currentTime);o.frequency.exponentialRampToValueAtTime(40,ctx.currentTime+0.12);g.gain.setValueAtTime(0.5,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.18);o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+0.2);}catch(e){}
+      setTimeout(kick,375);
+    }
+    kick();
+    // Pad arpegiado
+    const pad=ctx.createOscillator(), padG=ctx.createGain(); pad.type='triangle'; pad.frequency.value=baseNote*2; padG.gain.value=0.12;
+    pad.connect(padG); padG.connect(master); pad.start(); bgNodes.push(pad,padG);
+    let pstep=0; const pscale=[1,1.25,1.5,1.75];
+    function padTick(){if(!musicRunning)return;pad.frequency.setTargetAtTime(baseNote*2*pscale[pstep%4],ctx.currentTime,0.04);pstep++;setTimeout(padTick,500);}
+    padTick();
+  } catch(e){}
+}
+
+function startMusic(baseNote){ startMusicStyle1(baseNote); }
 function stopMusic(){musicRunning=false;bgNodes.forEach(n=>{try{n.stop?n.stop():n.disconnect();}catch(e){}});bgNodes=[];}
 function playSound(type){
   try{
@@ -288,8 +327,10 @@ let distance,totalCoins,speed,frame,boosting;
 let currentWorld,goalDistance,animId;
 let activePowers={};
 const POWER_DURATION=900;
-let coinMilestone=0;   // tracks next 100-coin threshold for auto power
-let reviveCount=0;     // how many times revived this run (cost increases)
+let coinMilestone=0;
+let reviveCount=0;
+let shipUpgraded=false;      // nave robusta al llegar a 1000 monedas
+let upgradeAnim=0;           // animación de transformación
 
 function resize(){
   W = window.innerWidth;
@@ -478,6 +519,9 @@ function startGame(){
   lastPhaseIdx=0;
   coinMilestone=100;
   reviveCount=0;
+  midMusicTriggered=false;
+  shipUpgraded=false;
+  upgradeAnim=0;
 
   document.getElementById('hud').style.display='flex';
   document.getElementById('pauseBtn').style.display='flex';
@@ -550,6 +594,13 @@ function update(){
   document.getElementById('progressFill').style.width=Math.min(100,distance/goalDistance*100)+'%';
   if(distance>=goalDistance){win();return;}
 
+  // Cambio de música a mitad de partida
+  if(!midMusicTriggered && distance>=goalDistance*0.5){
+    midMusicTriggered=true;
+    showPhaseAlert('🎵 ¡SEGUNDA MITAD!',['#f97316','#fbbf24','#ff0080']);
+    startMusicStyle2(currentWorld.musicNote);
+  }
+
   const spawnRate=Math.max(140,220-Math.floor(distance/100));
   if(frame%spawnRate===0) buildObstacle().forEach(o=>obstacles.push(o));
   if(frame%75===38) spawnCoins(W+20).forEach(c=>coins.push(c));
@@ -590,6 +641,16 @@ function update(){
     const dx=player.x+player.w/2-c.x,dy=player.y+player.h/2-c.y;
     if(Math.sqrt(dx*dx+dy*dy)<player.w/2+c.r+6){
       c.collected=true;totalCoins++;addParticle(c.x,c.y,'#fbbf24',5);playSound('coin');
+
+      // Upgrade nave al llegar a 1000 monedas
+      if(!shipUpgraded && totalCoins>=1000){
+        shipUpgraded=true; upgradeAnim=60;
+        player.w=68; player.h=52;  // nave más grande
+        addParticle(player.x+player.w/2,player.y+player.h/2,'#ff0080',50,true);
+        addParticle(player.x+player.w/2,player.y+player.h/2,'#fbbf24',50,true);
+        showPhaseAlert('🚀 ¡NAVE MEJORADA!',[  '#ff0080','#fbbf24','#00ffcc']);
+        playSound('win');
+      }
       // Auto superpower every 150 coins
       if(totalCoins>=coinMilestone){
         coinMilestone+=150;
@@ -623,6 +684,7 @@ function update(){
     if(Math.sqrt(dx*dx+dy*dy)<player.w/2+p.r){p.collected=true;activePowers[p.type]=(activePowers[p.type]||0)+POWER_DURATION;addParticle(p.x,p.y,p.color,12,true);playSound(p.type==='magnet'?'magnet':'power');}
   }
 
+  if(upgradeAnim>0)upgradeAnim--;
   Object.keys(activePowers).forEach(k=>{if(activePowers[k]>0)activePowers[k]--;});
   updatePowerUI();
 
@@ -923,19 +985,118 @@ function drawDiagonal75(cx, cy, w, h, colors, glow){
 function drawPlayer(){
   if(!player.alive&&frame%6>=4)return;
   const px=player.x,py=player.y,pw=player.w,ph=player.h;
+
+  // Aura de transformación
+  if(upgradeAnim>0){
+    const r=upgradeAnim/60;
+    ctx.save();
+    ctx.globalAlpha=r*0.7;
+    ctx.shadowColor='#ff0080'; ctx.shadowBlur=40*r;
+    ctx.strokeStyle='#ff0080'; ctx.lineWidth=3*r;
+    ctx.beginPath();ctx.ellipse(px+pw/2,py+ph/2,pw*0.9*r+10,ph*0.9*r+10,0,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle='#fbbf24'; ctx.lineWidth=2*r;
+    ctx.beginPath();ctx.ellipse(px+pw/2,py+ph/2,pw*0.7*r+5,ph*0.7*r+5,0,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+  }
+
+  // Escudo / estrella
   if(activePowers.shield>0){ctx.strokeStyle='#06b6d4';ctx.lineWidth=3;ctx.shadowColor='#06b6d4';ctx.shadowBlur=16;ctx.beginPath();ctx.ellipse(px+pw/2,py+ph/2,pw*0.7,ph*0.7,0,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;}
   if(activePowers.star>0){const sparkle=(frame%10)/10;ctx.shadowColor='#fbbf24';ctx.shadowBlur=25+sparkle*15;ctx.strokeStyle='rgba(255,200,0,0.7)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(px+pw/2,py+ph/2,pw*0.75,ph*0.75,0,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;}
-  if(boosting||player.jetFlame>0.1){const flH=22+player.jetFlame*35;const fg=ctx.createLinearGradient(px,py+ph/2,px-flH,py+ph/2);fg.addColorStop(0,`rgba(255,120,0,${player.jetFlame})`);fg.addColorStop(0.5,`rgba(255,200,50,${player.jetFlame*0.6})`);fg.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=fg;ctx.beginPath();ctx.ellipse(px-flH/2,py+ph/2,flH/2,7+player.jetFlame*5,0,0,Math.PI*2);ctx.fill();if(player.jetFlame>0.4){const fg2=ctx.createLinearGradient(px,py+ph*0.3,px-flH*0.6,py+ph*0.3);fg2.addColorStop(0,`rgba(255,100,0,${player.jetFlame*0.7})`);fg2.addColorStop(1,'rgba(255,200,0,0)');ctx.fillStyle=fg2;ctx.beginPath();ctx.ellipse(px-flH*0.3,py+ph*0.3,flH*0.3,4,0,0,Math.PI*2);ctx.fill();}}
-  ctx.fillStyle='#dde4ff';ctx.beginPath();ctx.roundRect(px,py+ph*0.15,pw*0.76,ph*0.7,6);ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.2)';ctx.beginPath();ctx.roundRect(px+2,py+ph*0.16,pw*0.3,ph*0.35,4);ctx.fill();
-  ctx.fillStyle=activePowers.star>0?'#fbbf24':activePowers.shield>0?'#06b6d4':currentWorld.color;ctx.beginPath();ctx.ellipse(px+pw*0.52,py+ph/2,pw*0.23,ph*0.3,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='rgba(200,230,255,0.75)';ctx.beginPath();ctx.ellipse(px+pw*0.52,py+ph/2,pw*0.14,ph*0.18,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#f43f5e';ctx.beginPath();ctx.moveTo(px+pw*0.76,py+ph*0.16);ctx.lineTo(px+pw,py+ph/2);ctx.lineTo(px+pw*0.76,py+ph*0.84);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#818cf8';ctx.beginPath();ctx.moveTo(px+pw*0.22,py+ph*0.5);ctx.lineTo(px-pw*0.04,py+ph*0.06);ctx.lineTo(px+pw*0.38,py+ph*0.5);ctx.fill();
-  ctx.beginPath();ctx.moveTo(px+pw*0.22,py+ph*0.5);ctx.lineTo(px-pw*0.04,py+ph*0.94);ctx.lineTo(px+pw*0.38,py+ph*0.5);ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.2)';ctx.beginPath();ctx.moveTo(px+pw*0.22,py+ph*0.5);ctx.lineTo(px-pw*0.04,py+ph*0.06);ctx.lineTo(px+pw*0.18,py+ph*0.4);ctx.fill();
-  ctx.fillStyle='#6366f1';ctx.beginPath();ctx.roundRect(px,py+ph*0.36,pw*0.18,ph*0.28,3);ctx.fill();
-  if(boosting){ctx.shadowColor='#f97316';ctx.shadowBlur=12;ctx.fillStyle='#f97316';ctx.beginPath();ctx.arc(px+pw*0.09,py+ph/2,4,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+
+  if(!shipUpgraded){
+    // ===== NAVE ORIGINAL =====
+    if(boosting||player.jetFlame>0.1){const flH=22+player.jetFlame*35;const fg=ctx.createLinearGradient(px,py+ph/2,px-flH,py+ph/2);fg.addColorStop(0,`rgba(255,120,0,${player.jetFlame})`);fg.addColorStop(0.5,`rgba(255,200,50,${player.jetFlame*0.6})`);fg.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=fg;ctx.beginPath();ctx.ellipse(px-flH/2,py+ph/2,flH/2,7+player.jetFlame*5,0,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle='#dde4ff';ctx.beginPath();ctx.roundRect(px,py+ph*0.15,pw*0.76,ph*0.7,6);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.2)';ctx.beginPath();ctx.roundRect(px+2,py+ph*0.16,pw*0.3,ph*0.35,4);ctx.fill();
+    ctx.fillStyle=activePowers.star>0?'#fbbf24':activePowers.shield>0?'#06b6d4':currentWorld.color;ctx.beginPath();ctx.ellipse(px+pw*0.52,py+ph/2,pw*0.23,ph*0.3,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(200,230,255,0.75)';ctx.beginPath();ctx.ellipse(px+pw*0.52,py+ph/2,pw*0.14,ph*0.18,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#f43f5e';ctx.beginPath();ctx.moveTo(px+pw*0.76,py+ph*0.16);ctx.lineTo(px+pw,py+ph/2);ctx.lineTo(px+pw*0.76,py+ph*0.84);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#818cf8';ctx.beginPath();ctx.moveTo(px+pw*0.22,py+ph*0.5);ctx.lineTo(px-pw*0.04,py+ph*0.06);ctx.lineTo(px+pw*0.38,py+ph*0.5);ctx.fill();
+    ctx.beginPath();ctx.moveTo(px+pw*0.22,py+ph*0.5);ctx.lineTo(px-pw*0.04,py+ph*0.94);ctx.lineTo(px+pw*0.38,py+ph*0.5);ctx.fill();
+    ctx.fillStyle='#6366f1';ctx.beginPath();ctx.roundRect(px,py+ph*0.36,pw*0.18,ph*0.28,3);ctx.fill();
+    if(boosting){ctx.shadowColor='#f97316';ctx.shadowBlur=12;ctx.fillStyle='#f97316';ctx.beginPath();ctx.arc(px+pw*0.09,py+ph/2,4,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+  } else {
+    // ===== NAVE ROBUSTA (1000+ monedas) =====
+    const pulse=(Math.sin(frame*0.12)+1)*0.5;
+
+    // Llama triple trasera
+    if(boosting||player.jetFlame>0.1){
+      const flH=32+player.jetFlame*50;
+      // Llama central
+      const fg=ctx.createLinearGradient(px,py+ph/2,px-flH,py+ph/2);
+      fg.addColorStop(0,`rgba(255,60,200,${player.jetFlame})`);
+      fg.addColorStop(0.4,`rgba(255,140,0,${player.jetFlame*0.8})`);
+      fg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=fg;ctx.beginPath();ctx.ellipse(px-flH/2,py+ph/2,flH/2,10+player.jetFlame*7,0,0,Math.PI*2);ctx.fill();
+      // Llama superior
+      ctx.fillStyle=`rgba(255,100,0,${player.jetFlame*0.5})`;
+      ctx.beginPath();ctx.ellipse(px-flH*0.35,py+ph*0.22,flH*0.28,5,0,0,Math.PI*2);ctx.fill();
+      // Llama inferior
+      ctx.beginPath();ctx.ellipse(px-flH*0.35,py+ph*0.78,flH*0.28,5,0,0,Math.PI*2);ctx.fill();
+    }
+
+    // Cuerpo principal — más ancho y robusto, color dorado/metálico
+    const bodyGrad=ctx.createLinearGradient(px,py,px,py+ph);
+    bodyGrad.addColorStop(0,'#ffd700');
+    bodyGrad.addColorStop(0.35,'#ff8c00');
+    bodyGrad.addColorStop(0.65,'#ff8c00');
+    bodyGrad.addColorStop(1,'#ffd700');
+    ctx.fillStyle=bodyGrad;
+    ctx.shadowColor='#ff8c00'; ctx.shadowBlur=8+pulse*6;
+    ctx.beginPath();ctx.roundRect(px,py+ph*0.08,pw*0.78,ph*0.84,8);ctx.fill();
+    ctx.shadowBlur=0;
+
+    // Placa blindada encima
+    ctx.fillStyle='rgba(255,255,255,0.18)';
+    ctx.beginPath();ctx.roundRect(px+4,py+ph*0.1,pw*0.42,ph*0.38,5);ctx.fill();
+
+    // Líneas de blindaje
+    ctx.strokeStyle='rgba(255,220,0,0.6)'; ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(px+pw*0.1,py+ph*0.3);ctx.lineTo(px+pw*0.72,py+ph*0.3);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px+pw*0.1,py+ph*0.7);ctx.lineTo(px+pw*0.72,py+ph*0.7);ctx.stroke();
+
+    // Ventana grande doble
+    ctx.fillStyle=activePowers.star>0?'#fbbf24':activePowers.shield>0?'#06b6d4':'#00cfff';
+    ctx.shadowColor=activePowers.star>0?'#fbbf24':'#00cfff'; ctx.shadowBlur=10+pulse*8;
+    ctx.beginPath();ctx.ellipse(px+pw*0.5,py+ph/2,pw*0.2,ph*0.28,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.8)';
+    ctx.beginPath();ctx.ellipse(px+pw*0.44,py+ph*0.38,pw*0.1,ph*0.12,0,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+
+    // Punta delantera — doble aleta
+    ctx.fillStyle='#ff4444';
+    ctx.beginPath();ctx.moveTo(px+pw*0.78,py+ph*0.08);ctx.lineTo(px+pw,py+ph/2);ctx.lineTo(px+pw*0.78,py+ph*0.92);ctx.closePath();ctx.fill();
+    // Borde dorado en punta
+    ctx.strokeStyle='#ffd700'; ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(px+pw*0.78,py+ph*0.08);ctx.lineTo(px+pw,py+ph/2);ctx.lineTo(px+pw*0.78,py+ph*0.92);ctx.stroke();
+
+    // Alas grandes superiores e inferiores
+    ctx.fillStyle='#cc6600';
+    // Ala superior
+    ctx.beginPath();ctx.moveTo(px+pw*0.3,py+ph*0.08);ctx.lineTo(px+pw*0.6,py);ctx.lineTo(px+pw*0.65,py+ph*0.08);ctx.closePath();ctx.fill();
+    // Ala inferior
+    ctx.beginPath();ctx.moveTo(px+pw*0.3,py+ph*0.92);ctx.lineTo(px+pw*0.6,py+ph);ctx.lineTo(px+pw*0.65,py+ph*0.92);ctx.closePath();ctx.fill();
+    // Bordes dorados en alas
+    ctx.strokeStyle='#ffd700'; ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(px+pw*0.3,py+ph*0.08);ctx.lineTo(px+pw*0.6,py);ctx.lineTo(px+pw*0.65,py+ph*0.08);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px+pw*0.3,py+ph*0.92);ctx.lineTo(px+pw*0.6,py+ph);ctx.lineTo(px+pw*0.65,py+ph*0.92);ctx.stroke();
+
+    // Motor trasero blindado
+    ctx.fillStyle='#444';
+    ctx.beginPath();ctx.roundRect(px,py+ph*0.3,pw*0.16,ph*0.4,4);ctx.fill();
+    ctx.fillStyle='#ff6600';
+    ctx.shadowColor='#ff6600'; ctx.shadowBlur=8;
+    ctx.beginPath();ctx.arc(px+pw*0.08,py+ph/2,5+pulse*2,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+
+    // Indicador de poder en el cuerpo
+    if(boosting){
+      ctx.shadowColor='#ff0080'; ctx.shadowBlur=18;
+      ctx.strokeStyle='#ff0080'; ctx.lineWidth=2;
+      ctx.beginPath();ctx.roundRect(px+2,py+ph*0.08,pw*0.78-2,ph*0.84,8);ctx.stroke();
+      ctx.shadowBlur=0;
+    }
+  }
 }
 
 // ===================== INPUT =====================
