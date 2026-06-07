@@ -40,17 +40,17 @@
   #progressGoal{position:fixed;bottom:8px;right:10px;color:rgba(255,255,255,0.6);font-size:11px;z-index:10;display:none;}
   #countdown{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:80px;font-weight:900;color:#fff;z-index:25;text-shadow:0 0 30px #7c3aed;display:none;pointer-events:none;}
   #phaseAlert{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:28px;font-weight:900;color:#fff;z-index:24;text-shadow:0 0 20px #00ffff;display:none;pointer-events:none;text-align:center;background:rgba(0,0,0,0.6);padding:14px 28px;border-radius:16px;border:2px solid #00ffff;}
-  #gameOver{display:none;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);overflow-y:auto;}
-  #gameOver .go-box{background:linear-gradient(135deg,#1a1a3e,#2d1b69);border:2px solid rgba(167,139,250,0.4);border-radius:22px;padding:18px 22px;text-align:center;max-width:340px;width:92%;margin:auto;}
-  .go-title{font-size:22px;font-weight:900;color:#fff;margin-bottom:2px;}
-  .go-sub{color:#a78bfa;margin-bottom:10px;font-size:12px;}
-  .go-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 14px;}
-  .go-stat{background:rgba(255,255,255,0.07);border-radius:10px;padding:7px;}
-  .go-stat .label{color:rgba(255,255,255,0.5);font-size:9px;margin-bottom:2px;}
-  .go-stat .value{color:#fbbf24;font-size:16px;font-weight:800;}
-  .btn-group{display:flex;gap:6px;flex-direction:column;}
-  .btn-retry{background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-size:13px;font-weight:800;padding:9px 24px;border-radius:50px;cursor:pointer;pointer-events:all;transition:all 0.2s;}
-  .btn-menu{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:12px;font-weight:600;padding:8px 24px;border-radius:50px;cursor:pointer;pointer-events:all;transition:all 0.2s;}
+  #gameOver{display:none;background:rgba(0,0,0,0.88);backdrop-filter:blur(8px);overflow-y:auto;align-items:center;justify-content:center;}
+  #gameOver .go-box{background:linear-gradient(135deg,#1a1a3e,#2d1b69);border:2px solid rgba(167,139,250,0.4);border-radius:18px;padding:14px 18px;text-align:center;width:94%;max-width:500px;margin:auto;}
+  .go-title{font-size:20px;font-weight:900;color:#fff;margin-bottom:2px;}
+  .go-sub{color:#a78bfa;margin-bottom:8px;font-size:11px;}
+  .go-stats{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin:6px 0 10px;}
+  .go-stat{background:rgba(255,255,255,0.07);border-radius:8px;padding:6px 4px;}
+  .go-stat .label{color:rgba(255,255,255,0.5);font-size:8px;margin-bottom:1px;}
+  .go-stat .value{color:#fbbf24;font-size:14px;font-weight:800;}
+  .btn-group{display:flex;gap:6px;flex-direction:row;justify-content:center;}
+  .btn-retry{background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-size:12px;font-weight:800;padding:8px 20px;border-radius:50px;cursor:pointer;pointer-events:all;transition:all 0.2s;}
+  .btn-menu{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:11px;font-weight:600;padding:8px 20px;border-radius:50px;cursor:pointer;pointer-events:all;transition:all 0.2s;}
   .btn-retry:hover{transform:scale(1.03);}
   .btn-menu:hover{background:rgba(255,255,255,0.2);}
   #worldComplete{display:none;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);}
@@ -138,10 +138,10 @@
       <div class="go-stat"><div class="label">MEJOR</div><div class="value" id="goBest">0m</div></div>
       <div class="go-stat"><div class="label">META</div><div class="value" id="goWorldGoal">0m</div></div>
     </div>
-    <div id="reviveSection" style="margin-bottom:12px;background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.3);border-radius:12px;padding:10px 14px;text-align:center;">
-      <div style="color:#fbbf24;font-size:13px;font-weight:700;margin-bottom:6px;">⚡ ¿SEGUIR DESDE AQUÍ?</div>
-      <div style="color:rgba(255,255,255,0.6);font-size:11px;margin-bottom:8px;">Costo: <span id="reviveCost" style="color:#fbbf24;font-weight:700;">50</span> monedas &bull; Tienes: <span id="reviveHave" style="color:#fbbf24;font-weight:700;">0</span></div>
-      <button class="btn-retry" id="btnRevive" onclick="revivePlayer()" style="background:linear-gradient(135deg,#d97706,#b45309);font-size:13px;padding:9px 22px;">💛 REVIVIR</button>
+    <div id="reviveSection" style="margin-bottom:8px;background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.3);border-radius:10px;padding:7px 12px;text-align:center;">
+      <div style="color:#fbbf24;font-size:12px;font-weight:700;margin-bottom:4px;">⚡ ¿SEGUIR DESDE AQUÍ?</div>
+      <div style="color:rgba(255,255,255,0.6);font-size:10px;margin-bottom:6px;">Costo: <span id="reviveCost" style="color:#fbbf24;font-weight:700;">50</span> monedas &bull; Tienes: <span id="reviveHave" style="color:#fbbf24;font-weight:700;">0</span></div>
+      <button class="btn-retry" id="btnRevive" onclick="revivePlayer()" style="background:linear-gradient(135deg,#d97706,#b45309);font-size:11px;padding:7px 18px;">💛 REVIVIR</button>
     </div>
     <div class="btn-group">
       <button class="btn-retry" onclick="retryGame()">🔄 REINTENTAR</button>
@@ -956,7 +956,7 @@ window.addEventListener('resize',initStars);
 
 <div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;text-align:center;">
   <span style="color:rgba(255,255,255,0.28);font-size:11px;font-family:'Segoe UI',sans-serif;letter-spacing:1px;">
-    © DanielReal · All rights reserved
+    © 2026 DanielReal · All rights reserved
   </span>
 </div>
 </body>
