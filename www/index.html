@@ -287,7 +287,7 @@ let player,obstacles,coins,powerups,particles;
 let distance,totalCoins,speed,frame,boosting;
 let currentWorld,goalDistance,animId;
 let activePowers={};
-const POWER_DURATION=300;
+const POWER_DURATION=900;
 let coinMilestone=0;   // tracks next 100-coin threshold for auto power
 let reviveCount=0;     // how many times revived this run (cost increases)
 
@@ -473,7 +473,7 @@ function startGame(){
 
   currentWorld=WORLDS[selectedWorld]; goalDistance=currentWorld.goal;
   player=createPlayer(); obstacles=[];coins=[];powerups=[];particles=[];
-  distance=0;totalCoins=0;speed=1.2;frame=0;boosting=false;
+  distance=0;totalCoins=0;speed=0.55;frame=0;boosting=false;
   activePowers={};
   lastPhaseIdx=0;
   coinMilestone=100;
@@ -517,9 +517,9 @@ function showWorldSelect(){
 function loop(){if(gameState!=='playing')return;animId=requestAnimationFrame(loop);frame++;update();render();}
 
 function update(){
-  speed=1.2+distance*0.0008;
+  speed=0.55+distance*0.00035;  // velocidad base = lo que antes era el poder reloj
   const slow=activePowers.slow>0;
-  const effSpeed=slow?speed*0.45:speed;
+  const effSpeed=slow?speed*0.35:speed;  // reloj ahora va aún más lento
 
   // Check phase change
   const currentPhaseIdx=OBSTACLE_PHASES.filter(p=>distance>=p.minDist).length-1;
