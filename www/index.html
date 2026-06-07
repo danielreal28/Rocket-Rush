@@ -8,9 +8,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Rocket Rush 🚀</title>
 <style>
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0a0a1a;}
   *{margin:0;padding:0;box-sizing:border-box;touch-action:none;user-select:none;}
-  body{background:#0a0a1a;overflow:hidden;font-family:'Segoe UI',sans-serif;width:100vw;height:100vh;}
-  canvas{display:block;width:100%;height:100%;}
+  body{font-family:'Segoe UI',sans-serif;position:fixed;top:0;left:0;right:0;bottom:0;}
+  canvas{position:fixed;top:0;left:0;width:100%!important;height:100%!important;display:block;}
   .screen{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;}
   #worldSelect{background:linear-gradient(135deg,#0a0a2e 0%,#1a1a4e 50%,#0a1a3e 100%);}
   #worldSelect .title{font-size:clamp(26px,5vw,46px);font-weight:900;color:#fff;letter-spacing:4px;text-shadow:0 0 30px #7c3aed;margin-bottom:4px;}
@@ -291,10 +292,23 @@ let coinMilestone=0;   // tracks next 100-coin threshold for auto power
 let reviveCount=0;     // how many times revived this run (cost increases)
 
 function resize(){
-  // Usar visualViewport si está disponible (más preciso en móvil)
-  const vp = window.visualViewport;
-  W = canvas.width  = vp ? Math.round(vp.width)  : window.innerWidth;
-  H = canvas.height = vp ? Math.round(vp.height) : window.innerHeight;
+  // En móvil usar screen.width/height para landscape real,
+  // en desktop usar window dimensions
+  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  if(isMobile){
+    // Tomar el mayor como ancho (landscape)
+    const sw = Math.max(window.screen.width, window.screen.height);
+    const sh = Math.min(window.screen.width, window.screen.height);
+    // Pero verificar contra innerWidth también por si está en portrait aun
+    W = canvas.width  = window.innerWidth > window.innerHeight ? window.innerWidth  : window.innerHeight;
+    H = canvas.height = window.innerWidth > window.innerHeight ? window.innerHeight : window.innerWidth;
+  } else {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  // Asegurar que el canvas llene visualmente la pantalla
+  canvas.style.width  = window.innerWidth  + 'px';
+  canvas.style.height = window.innerHeight + 'px';
 }
 resize();
 
@@ -318,7 +332,7 @@ if(window.visualViewport){
 }
 
 // ===================== PLAYER =====================
-function createPlayer(){return{x:W*0.16,y:H/2,w:48,h:36,vy:0,gravity:0.22,thrust:-0.48,maxFall:7,maxRise:-6,alive:true,jetFlame:0,trail:[],invincible:0};}
+function createPlayer(){return{x:W*0.16,y:H/2,w:48,h:36,vy:0,gravity:0.16,thrust:-0.34,maxFall:5.5,maxRise:-4.5,alive:true,jetFlame:0,trail:[],invincible:0};}
 
 // ===================== OBSTACLE COLOR =====================
 function getObstacleColors(){
@@ -488,7 +502,7 @@ function startGame(){
 
   currentWorld=WORLDS[selectedWorld]; goalDistance=currentWorld.goal;
   player=createPlayer(); obstacles=[];coins=[];powerups=[];particles=[];
-  distance=0;totalCoins=0;speed=2.2;frame=0;boosting=false;
+  distance=0;totalCoins=0;speed=1.5;frame=0;boosting=false;
   activePowers={};
   lastPhaseIdx=0;
   coinMilestone=100;
@@ -532,7 +546,7 @@ function showWorldSelect(){
 function loop(){if(gameState!=='playing')return;animId=requestAnimationFrame(loop);frame++;update();render();}
 
 function update(){
-  speed=2.2+distance*0.0016;
+  speed=1.5+distance*0.001;
   const slow=activePowers.slow>0;
   const effSpeed=slow?speed*0.45:speed;
 
