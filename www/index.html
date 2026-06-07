@@ -40,17 +40,17 @@
   #progressGoal{position:fixed;bottom:8px;right:10px;color:rgba(255,255,255,0.6);font-size:11px;z-index:10;display:none;}
   #countdown{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:80px;font-weight:900;color:#fff;z-index:25;text-shadow:0 0 30px #7c3aed;display:none;pointer-events:none;}
   #phaseAlert{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:28px;font-weight:900;color:#fff;z-index:24;text-shadow:0 0 20px #00ffff;display:none;pointer-events:none;text-align:center;background:rgba(0,0,0,0.6);padding:14px 28px;border-radius:16px;border:2px solid #00ffff;}
-  #gameOver{display:none;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);}
-  #gameOver .go-box{background:linear-gradient(135deg,#1a1a3e,#2d1b69);border:2px solid rgba(167,139,250,0.4);border-radius:22px;padding:28px 36px;text-align:center;max-width:360px;width:90%;}
-  .go-title{font-size:30px;font-weight:900;color:#fff;margin-bottom:4px;}
-  .go-sub{color:#a78bfa;margin-bottom:16px;font-size:13px;}
-  .go-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 20px;}
-  .go-stat{background:rgba(255,255,255,0.07);border-radius:10px;padding:10px;}
-  .go-stat .label{color:rgba(255,255,255,0.5);font-size:10px;margin-bottom:3px;}
-  .go-stat .value{color:#fbbf24;font-size:20px;font-weight:800;}
-  .btn-group{display:flex;gap:8px;flex-direction:column;}
-  .btn-retry{background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-size:15px;font-weight:800;padding:11px 30px;border-radius:50px;cursor:pointer;pointer-events:all;transition:all 0.2s;}
-  .btn-menu{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:13px;font-weight:600;padding:9px 30px;border-radius:50px;cursor:pointer;pointer-events:all;transition:all 0.2s;}
+  #gameOver{display:none;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);overflow-y:auto;}
+  #gameOver .go-box{background:linear-gradient(135deg,#1a1a3e,#2d1b69);border:2px solid rgba(167,139,250,0.4);border-radius:22px;padding:18px 22px;text-align:center;max-width:340px;width:92%;margin:auto;}
+  .go-title{font-size:22px;font-weight:900;color:#fff;margin-bottom:2px;}
+  .go-sub{color:#a78bfa;margin-bottom:10px;font-size:12px;}
+  .go-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 14px;}
+  .go-stat{background:rgba(255,255,255,0.07);border-radius:10px;padding:7px;}
+  .go-stat .label{color:rgba(255,255,255,0.5);font-size:9px;margin-bottom:2px;}
+  .go-stat .value{color:#fbbf24;font-size:16px;font-weight:800;}
+  .btn-group{display:flex;gap:6px;flex-direction:column;}
+  .btn-retry{background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-size:13px;font-weight:800;padding:9px 24px;border-radius:50px;cursor:pointer;pointer-events:all;transition:all 0.2s;}
+  .btn-menu{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:12px;font-weight:600;padding:8px 24px;border-radius:50px;cursor:pointer;pointer-events:all;transition:all 0.2s;}
   .btn-retry:hover{transform:scale(1.03);}
   .btn-menu:hover{background:rgba(255,255,255,0.2);}
   #worldComplete{display:none;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);}
@@ -69,7 +69,7 @@
 <div id="rotateMsg">
   <div class="rot-icon">📱</div>
   <div class="rot-text">GIRA TU TELÉFONO</div>
-  <div class="rot-sub">Este juego se juega en horizontal</div>
+  <div class="rot-sub">Activa la rotación automática en tu teléfono<br>y ponlo en horizontal para jugar</div>
 </div>
 
 <div class="screen" id="worldSelect">
@@ -292,23 +292,14 @@ let coinMilestone=0;   // tracks next 100-coin threshold for auto power
 let reviveCount=0;     // how many times revived this run (cost increases)
 
 function resize(){
-  // En móvil usar screen.width/height para landscape real,
-  // en desktop usar window dimensions
-  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  if(isMobile){
-    // Tomar el mayor como ancho (landscape)
-    const sw = Math.max(window.screen.width, window.screen.height);
-    const sh = Math.min(window.screen.width, window.screen.height);
-    // Pero verificar contra innerWidth también por si está en portrait aun
-    W = canvas.width  = window.innerWidth > window.innerHeight ? window.innerWidth  : window.innerHeight;
-    H = canvas.height = window.innerWidth > window.innerHeight ? window.innerHeight : window.innerWidth;
-  } else {
-    W = canvas.width  = window.innerWidth;
-    H = canvas.height = window.innerHeight;
-  }
-  // Asegurar que el canvas llene visualmente la pantalla
-  canvas.style.width  = window.innerWidth  + 'px';
-  canvas.style.height = window.innerHeight + 'px';
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width  = W;
+  canvas.height = H;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.style.top    = '0px';
+  canvas.style.left   = '0px';
 }
 resize();
 
@@ -332,7 +323,7 @@ if(window.visualViewport){
 }
 
 // ===================== PLAYER =====================
-function createPlayer(){return{x:W*0.16,y:H/2,w:48,h:36,vy:0,gravity:0.16,thrust:-0.34,maxFall:5.5,maxRise:-4.5,alive:true,jetFlame:0,trail:[],invincible:0};}
+function createPlayer(){return{x:W*0.16,y:H/2,w:44,h:32,vy:0,gravity:0.14,thrust:-0.28,maxFall:4.5,maxRise:-3.8,alive:true,jetFlame:0,trail:[],invincible:0};}
 
 // ===================== OBSTACLE COLOR =====================
 function getObstacleColors(){
@@ -408,7 +399,7 @@ function getObstacleBBox(o){
 
 function spawnCoins(x){
   const pat=['line','arc','zigzag','scatter'][Math.floor(Math.random()*4)];
-  const count=6+Math.floor(Math.random()*5);
+  const count=4+Math.floor(Math.random()*3);
   const arr=[];
   for(let i=0;i<count;i++){
     let cy; const safeT=H*0.15,safeB=H*0.85;
@@ -416,7 +407,7 @@ function spawnCoins(x){
     else if(pat==='arc') cy=H/2+Math.sin(i/count*Math.PI)*H*0.28;
     else if(pat==='zigzag') cy=i%2===0?H*0.28:H*0.72;
     else cy=safeT+Math.random()*(safeB-safeT);
-    arr.push({x:x+i*44,y:cy,r:20,collected:false,anim:Math.random()*Math.PI*2});
+    arr.push({x:x+i*55,y:cy,r:13,collected:false,anim:Math.random()*Math.PI*2});
   }
   return arr;
 }
@@ -467,30 +458,10 @@ function showPhaseAlert(label, colors){
   setTimeout(()=>{ el.style.display='none'; }, 2000);
 }
 
-// ===================== ORIENTATION LOCK =====================
-function lockLandscape(){
-  try{
-    if(screen.orientation && screen.orientation.lock){
-      screen.orientation.lock('landscape').catch(()=>{});
-    } else if(screen.lockOrientation){
-      screen.lockOrientation('landscape');
-    } else if(screen.mozLockOrientation){
-      screen.mozLockOrientation('landscape');
-    } else if(screen.msLockOrientation){
-      screen.msLockOrientation('landscape');
-    }
-  }catch(e){}
-}
-function unlockOrientation(){
-  try{
-    if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
-    else if(screen.unlockOrientation) screen.unlockOrientation();
-    else if(screen.mozUnlockOrientation) screen.mozUnlockOrientation();
-    else if(screen.msUnlockOrientation) screen.msUnlockOrientation();
-  }catch(e){}
-}
-// Intentar bloquear al cargar la página
-lockLandscape();
+// ===================== ORIENTATION =====================
+// No forzamos orientación — le pedimos al usuario que lo haga manualmente
+function lockLandscape(){ /* el usuario gira manualmente */ }
+function unlockOrientation(){ /* sin acción */ }
 
 // ===================== START GAME =====================
 function startGame(){
@@ -502,7 +473,7 @@ function startGame(){
 
   currentWorld=WORLDS[selectedWorld]; goalDistance=currentWorld.goal;
   player=createPlayer(); obstacles=[];coins=[];powerups=[];particles=[];
-  distance=0;totalCoins=0;speed=1.5;frame=0;boosting=false;
+  distance=0;totalCoins=0;speed=1.2;frame=0;boosting=false;
   activePowers={};
   lastPhaseIdx=0;
   coinMilestone=100;
@@ -546,7 +517,7 @@ function showWorldSelect(){
 function loop(){if(gameState!=='playing')return;animId=requestAnimationFrame(loop);frame++;update();render();}
 
 function update(){
-  speed=1.5+distance*0.001;
+  speed=1.2+distance*0.0008;
   const slow=activePowers.slow>0;
   const effSpeed=slow?speed*0.45:speed;
 
