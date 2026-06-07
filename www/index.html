@@ -2,7 +2,10 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, orientation=landscape">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Rocket Rush 🚀</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;touch-action:none;user-select:none;}
@@ -52,10 +55,21 @@
   #worldComplete{display:none;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);}
   #worldComplete .wc-box{background:linear-gradient(135deg,#1a3a1a,#0d4d1a);border:2px solid rgba(74,222,128,0.4);border-radius:22px;padding:28px 36px;text-align:center;max-width:360px;width:90%;}
   #worldComplete .wc-title{font-size:34px;font-weight:900;color:#4ade80;margin-bottom:6px;}
-  #worldComplete .wc-dist{color:#fff;font-size:16px;margin-bottom:16px;}
+  #rotateMsg{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a1a;z-index:999;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;}
+  #rotateMsg .rot-icon{font-size:64px;animation:rotAnim 1.2s ease-in-out infinite alternate;}
+  #rotateMsg .rot-text{font-size:18px;font-weight:700;color:#a78bfa;margin-top:16px;letter-spacing:2px;}
+  #rotateMsg .rot-sub{font-size:13px;color:rgba(255,255,255,0.5);margin-top:8px;}
+  @keyframes rotAnim{from{transform:rotate(0deg);}to{transform:rotate(90deg);}}
 </style>
 </head>
 <body>
+
+<!-- Pantalla de rotación — solo visible en portrait -->
+<div id="rotateMsg">
+  <div class="rot-icon">📱</div>
+  <div class="rot-text">GIRA TU TELÉFONO</div>
+  <div class="rot-sub">Este juego se juega en horizontal</div>
+</div>
 
 <div class="screen" id="worldSelect">
   <canvas class="stars-bg" id="starsCanvas"></canvas>
@@ -276,12 +290,35 @@ const POWER_DURATION=300;
 let coinMilestone=0;   // tracks next 100-coin threshold for auto power
 let reviveCount=0;     // how many times revived this run (cost increases)
 
-function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+function resize(){
+  // Usar visualViewport si está disponible (más preciso en móvil)
+  const vp = window.visualViewport;
+  W = canvas.width  = vp ? Math.round(vp.width)  : window.innerWidth;
+  H = canvas.height = vp ? Math.round(vp.height) : window.innerHeight;
+}
 resize();
-window.addEventListener('resize',()=>{resize();});
+
+// ===================== ORIENTATION GUARD =====================
+function checkOrientation(){
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const rotMsg = document.getElementById('rotateMsg');
+  if(isPortrait){
+    rotMsg.style.display='flex';
+  } else {
+    rotMsg.style.display='none';
+  }
+}
+checkOrientation();
+window.addEventListener('resize',()=>{resize(); checkOrientation();});
+window.addEventListener('orientationchange',()=>{
+  setTimeout(()=>{resize(); checkOrientation();}, 200);
+});
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',()=>{resize();});
+}
 
 // ===================== PLAYER =====================
-function createPlayer(){return{x:W*0.16,y:H/2,w:48,h:36,vy:0,gravity:0.38,thrust:-0.82,maxFall:10,maxRise:-9,alive:true,jetFlame:0,trail:[],invincible:0};}
+function createPlayer(){return{x:W*0.16,y:H/2,w:48,h:36,vy:0,gravity:0.22,thrust:-0.48,maxFall:7,maxRise:-6,alive:true,jetFlame:0,trail:[],invincible:0};}
 
 // ===================== OBSTACLE COLOR =====================
 function getObstacleColors(){
@@ -438,6 +475,8 @@ function unlockOrientation(){
     else if(screen.msUnlockOrientation) screen.msUnlockOrientation();
   }catch(e){}
 }
+// Intentar bloquear al cargar la página
+lockLandscape();
 
 // ===================== START GAME =====================
 function startGame(){
