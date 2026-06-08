@@ -34,8 +34,13 @@
   #powerBar{position:fixed;top:42px;left:12px;z-index:10;display:flex;gap:6px;pointer-events:none;}
   .power-badge{background:rgba(0,0,0,0.6);border-radius:12px;padding:4px 10px;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,0.3);animation:pbPulse 0.5s infinite alternate;}
   @keyframes pbPulse{from{opacity:0.8;}to{opacity:1;transform:scale(1.05);}}
-  #pauseBtn{position:fixed;top:8px;right:8px;z-index:15;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:50%;width:36px;height:36px;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:15px;pointer-events:all;}
-  #progressBar{position:fixed;bottom:0;left:0;width:100%;height:7px;background:rgba(255,255,255,0.1);z-index:10;}
+  #pauseBtn{position:fixed;top:8px;right:8px;z-index:15;background:rgba(124,58,237,0.75);border:2px solid rgba(167,139,250,0.7);color:#fff;border-radius:50%;width:44px;height:44px;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:18px;pointer-events:all;box-shadow:0 0 12px rgba(124,58,237,0.5);}
+  #pauseOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:18;flex-direction:column;align-items:center;justify-content:center;}
+  #pauseOverlay .pause-box{background:linear-gradient(135deg,#1a1a3e,#2d1b69);border:2px solid rgba(167,139,250,0.5);border-radius:20px;padding:28px 40px;text-align:center;}
+  #pauseOverlay .pause-title{font-size:28px;font-weight:900;color:#fff;margin-bottom:6px;}
+  #pauseOverlay .pause-sub{color:#a78bfa;font-size:13px;margin-bottom:20px;}
+  #pauseOverlay .btn-resume{background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-size:15px;font-weight:800;padding:12px 36px;border-radius:50px;cursor:pointer;pointer-events:all;margin-bottom:10px;display:block;width:100%;}
+  #pauseOverlay .btn-quit{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:13px;font-weight:600;padding:10px 36px;border-radius:50px;cursor:pointer;pointer-events:all;display:block;width:100%;}
   #progressFill{height:100%;background:linear-gradient(90deg,#7c3aed,#fbbf24);width:0%;transition:width 0.1s;}
   #progressGoal{position:fixed;bottom:8px;right:10px;color:rgba(255,255,255,0.6);font-size:11px;z-index:10;display:none;}
   #countdown{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:80px;font-weight:900;color:#fff;z-index:25;text-shadow:0 0 30px #7c3aed;display:none;pointer-events:none;}
@@ -127,6 +132,15 @@
 <div id="progressGoal"></div>
 <div id="countdown"></div>
 <div id="phaseAlert"></div>
+
+<div id="pauseOverlay">
+  <div class="pause-box">
+    <div class="pause-title">⏸ PAUSA</div>
+    <div class="pause-sub" id="pauseWorldName">Mundo: Cosmos</div>
+    <button class="btn-resume" onclick="resumeGame()">▶ CONTINUAR</button>
+    <button class="btn-quit" onclick="showWorldSelect()">🗺 SALIR AL MENÚ</button>
+  </div>
+</div>
 
 <div class="screen" id="gameOver">
   <div class="go-box">
@@ -245,36 +259,77 @@ function startMusicStyle1(baseNote) {
   } catch(e){}
 }
 
-// Música estilo 2 — más intensa/épica para la segunda mitad
-function startMusicStyle2(baseNote) {
+// Música segunda mitad — distinta según el mundo (usa worldId para variar)
+function startMusicStyle2(baseNote, worldId) {
   stopMusic();
   try {
     const ctx = getAudio(); musicRunning = true;
     const master = ctx.createGain(); master.gain.value = 0.2; master.connect(ctx.destination); bgNodes.push(master);
-    // Bajo pulsante más agresivo
-    const bass = ctx.createOscillator(), bassG = ctx.createGain();
-    bass.type='sawtooth'; bass.frequency.value=baseNote*0.5; bassG.gain.value=0.4;
-    bass.connect(bassG); bassG.connect(master); bass.start(); bgNodes.push(bass,bassG);
-    // Melodía rápida
-    const mel = ctx.createOscillator(), melG = ctx.createGain();
-    mel.type='square'; mel.frequency.value=baseNote*1.5; melG.gain.value=0.2;
-    mel.connect(melG); melG.connect(master); mel.start(); bgNodes.push(mel,melG);
-    const scale2=[1,1.2,1.5,1.8,2,1.8,1.5,1.2,1,0.9,0.75,0.9]; let step=0;
-    function tick2(){if(!musicRunning)return;const t=ctx.currentTime;mel.frequency.setTargetAtTime(baseNote*1.5*scale2[step%scale2.length],t,0.03);melG.gain.setValueAtTime(0.35,t);melG.gain.exponentialRampToValueAtTime(0.1,t+0.2);step++;setTimeout(tick2,250);}
-    tick2();
-    // Bombo rítmico
-    function kick(){
-      if(!musicRunning)return;
-      try{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(160,ctx.currentTime);o.frequency.exponentialRampToValueAtTime(40,ctx.currentTime+0.12);g.gain.setValueAtTime(0.5,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.18);o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+0.2);}catch(e){}
-      setTimeout(kick,375);
+
+    // Elige estilo según worldId % 4
+    const style = worldId % 4;
+
+    if(style === 0){
+      // Épico / dramático — mundos 0,4,8,12: ritmo rápido con bombo fuerte
+      const bass=ctx.createOscillator(),bassG=ctx.createGain();
+      bass.type='sawtooth'; bass.frequency.value=baseNote*0.5; bassG.gain.value=0.35;
+      bass.connect(bassG); bassG.connect(master); bass.start(); bgNodes.push(bass,bassG);
+      const mel=ctx.createOscillator(),melG=ctx.createGain();
+      mel.type='square'; mel.frequency.value=baseNote*1.5; melG.gain.value=0.18;
+      mel.connect(melG); melG.connect(master); mel.start(); bgNodes.push(mel,melG);
+      const sc=[1,1.2,1.5,1.8,2,1.5,1.2,1]; let s=0;
+      function t1(){if(!musicRunning)return;mel.frequency.setTargetAtTime(baseNote*1.5*sc[s%sc.length],ctx.currentTime,0.03);melG.gain.setValueAtTime(0.32,ctx.currentTime);melG.gain.exponentialRampToValueAtTime(0.08,ctx.currentTime+0.18);s++;setTimeout(t1,220);}
+      t1();
+      function kick(){if(!musicRunning)return;try{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(180,ctx.currentTime);o.frequency.exponentialRampToValueAtTime(40,ctx.currentTime+0.1);g.gain.setValueAtTime(0.55,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.15);o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+0.18);}catch(e){}setTimeout(kick,350);}
+      kick();
+
+    } else if(style === 1){
+      // Electrónico / frenético — mundos 1,5,9,13: arpegio veloz
+      const mel=ctx.createOscillator(),melG=ctx.createGain();
+      mel.type='sawtooth'; mel.frequency.value=baseNote*2; melG.gain.value=0.15;
+      mel.connect(melG); melG.connect(master); mel.start(); bgNodes.push(mel,melG);
+      const sc=[1,1.33,1.5,1.67,2,1.67,1.5,1.33,1,0.75,0.67,0.75]; let s=0;
+      function t2(){if(!musicRunning)return;mel.frequency.setTargetAtTime(baseNote*2*sc[s%sc.length],ctx.currentTime,0.02);melG.gain.setValueAtTime(0.28,ctx.currentTime);melG.gain.exponentialRampToValueAtTime(0.06,ctx.currentTime+0.12);s++;setTimeout(t2,150);}
+      t2();
+      const pad=ctx.createOscillator(),padG=ctx.createGain();
+      pad.type='triangle'; pad.frequency.value=baseNote; padG.gain.value=0.18;
+      pad.connect(padG); padG.connect(master); pad.start(); bgNodes.push(pad,padG);
+      function hihat(){if(!musicRunning)return;try{const buf=ctx.createBuffer(1,ctx.sampleRate*0.04,ctx.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*0.3;const src=ctx.createBufferSource(),g=ctx.createGain();src.buffer=buf;g.gain.setValueAtTime(0.4,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.04);src.connect(g);g.connect(master);src.start();}catch(e){}setTimeout(hihat,180);}
+      hihat();
+
+    } else if(style === 2){
+      // Oscuro / ambiente — mundos 2,6,10,14: lento y tenso
+      const bass=ctx.createOscillator(),bassG=ctx.createGain();
+      bass.type='sine'; bass.frequency.value=baseNote*0.33; bassG.gain.value=0.5;
+      bass.connect(bassG); bassG.connect(master); bass.start(); bgNodes.push(bass,bassG);
+      const sc=[1,0.9,0.8,0.75,0.67,0.75,0.8,0.9]; let s=0;
+      bass.frequency.setValueAtTime(baseNote*0.33,ctx.currentTime);
+      function bassSlide(){if(!musicRunning)return;bass.frequency.setTargetAtTime(baseNote*0.33*sc[s%sc.length],ctx.currentTime,0.3);s++;setTimeout(bassSlide,700);}
+      bassSlide();
+      const mel=ctx.createOscillator(),melG=ctx.createGain();
+      mel.type='triangle'; mel.frequency.value=baseNote; melG.gain.value=0.12;
+      mel.connect(melG); melG.connect(master); mel.start(); bgNodes.push(mel,melG);
+      const sc2=[1,1.125,1.25,1.5,1.25,1.125]; let s2=0;
+      function t3(){if(!musicRunning)return;mel.frequency.setTargetAtTime(baseNote*sc2[s2%sc2.length],ctx.currentTime,0.08);melG.gain.setValueAtTime(0.2,ctx.currentTime);melG.gain.exponentialRampToValueAtTime(0.05,ctx.currentTime+0.5);s2++;setTimeout(t3,600);}
+      t3();
+
+    } else {
+      // Heroico / épico final — mundos 3,7,11,15: fanfarria con acordes
+      const bass=ctx.createOscillator(),bassG=ctx.createGain();
+      bass.type='square'; bass.frequency.value=baseNote*0.5; bassG.gain.value=0.25;
+      bass.connect(bassG); bassG.connect(master); bass.start(); bgNodes.push(bass,bassG);
+      const chord=[1,1.25,1.5,2]; let ci=0;
+      function strumChord(){
+        if(!musicRunning)return;
+        chord.forEach((r,i)=>{
+          try{const o=ctx.createOscillator(),g=ctx.createGain();o.type='triangle';o.frequency.value=baseNote*r;g.gain.setValueAtTime(0,ctx.currentTime+i*0.04);g.gain.linearRampToValueAtTime(0.18,ctx.currentTime+i*0.04+0.05);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.04+0.55);o.connect(g);g.connect(master);o.start(ctx.currentTime+i*0.04);o.stop(ctx.currentTime+i*0.04+0.6);}catch(e){}
+        });
+        ci++; setTimeout(strumChord,800);
+      }
+      strumChord();
+      function kick(){if(!musicRunning)return;try{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(200,ctx.currentTime);o.frequency.exponentialRampToValueAtTime(50,ctx.currentTime+0.15);g.gain.setValueAtTime(0.5,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.2);o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+0.22);}catch(e){}setTimeout(kick,400);}
+      kick();
     }
-    kick();
-    // Pad arpegiado
-    const pad=ctx.createOscillator(), padG=ctx.createGain(); pad.type='triangle'; pad.frequency.value=baseNote*2; padG.gain.value=0.12;
-    pad.connect(padG); padG.connect(master); pad.start(); bgNodes.push(pad,padG);
-    let pstep=0; const pscale=[1,1.25,1.5,1.75];
-    function padTick(){if(!musicRunning)return;pad.frequency.setTargetAtTime(baseNote*2*pscale[pstep%4],ctx.currentTime,0.04);pstep++;setTimeout(padTick,500);}
-    padTick();
   } catch(e){}
 }
 
@@ -329,8 +384,9 @@ let activePowers={};
 const POWER_DURATION=900;
 let coinMilestone=0;
 let reviveCount=0;
-let shipUpgraded=false;      // nave robusta al llegar a 1000 monedas
-let upgradeAnim=0;           // animación de transformación
+let shipUpgraded=false;
+let upgradeAnim=0;
+let shipPieces=[];   // piezas que vuelan durante la transformación
 
 function resize(){
   W = window.innerWidth;
@@ -522,6 +578,7 @@ function startGame(){
   midMusicTriggered=false;
   shipUpgraded=false;
   upgradeAnim=0;
+  shipPieces=[];
 
   document.getElementById('hud').style.display='flex';
   document.getElementById('pauseBtn').style.display='flex';
@@ -598,7 +655,7 @@ function update(){
   if(!midMusicTriggered && distance>=goalDistance*0.5){
     midMusicTriggered=true;
     showPhaseAlert('🎵 ¡SEGUNDA MITAD!',['#f97316','#fbbf24','#ff0080']);
-    startMusicStyle2(currentWorld.musicNote);
+    startMusicStyle2(currentWorld.musicNote, currentWorld.id);
   }
 
   const spawnRate=Math.max(140,220-Math.floor(distance/100));
@@ -644,11 +701,27 @@ function update(){
 
       // Upgrade nave al llegar a 1000 monedas
       if(!shipUpgraded && totalCoins>=1000){
-        shipUpgraded=true; upgradeAnim=60;
-        player.w=68; player.h=52;  // nave más grande
-        addParticle(player.x+player.w/2,player.y+player.h/2,'#ff0080',50,true);
-        addParticle(player.x+player.w/2,player.y+player.h/2,'#fbbf24',50,true);
-        showPhaseAlert('🚀 ¡NAVE MEJORADA!',[  '#ff0080','#fbbf24','#00ffcc']);
+        shipUpgraded=true; upgradeAnim=90;
+        // Crear piezas que vuelan desde la nave
+        const cx=player.x+player.w/2, cy=player.y+player.h/2;
+        const pieceColors=['#dde4ff','#818cf8','#f43f5e','#6366f1','#fbbf24','#00cfff'];
+        for(let i=0;i<14;i++){
+          const angle=(i/14)*Math.PI*2;
+          const spd=2+Math.random()*3.5;
+          shipPieces.push({
+            x:cx, y:cy,
+            vx:Math.cos(angle)*spd, vy:Math.sin(angle)*spd,
+            w:6+Math.random()*14, h:4+Math.random()*8,
+            rot:Math.random()*Math.PI*2, rotSpd:(Math.random()-0.5)*0.3,
+            color:pieceColors[i%pieceColors.length],
+            life:1, decay:0.012+Math.random()*0.01,
+            phase:'fly'  // fly → return → done
+          });
+        }
+        player.w=68; player.h=52;
+        addParticle(cx,cy,'#ff0080',60,true);
+        addParticle(cx,cy,'#fbbf24',40,true);
+        showPhaseAlert('🚀 ¡NAVE MEJORADA!',['#ff0080','#fbbf24','#00ffcc']);
         playSound('win');
       }
       // Auto superpower every 150 coins
@@ -685,6 +758,21 @@ function update(){
   }
 
   if(upgradeAnim>0)upgradeAnim--;
+  // Actualizar piezas de transformación
+  for(let i=shipPieces.length-1;i>=0;i--){
+    const p=shipPieces[i];
+    if(upgradeAnim>45){
+      // Fase 1 (frames 90→45): piezas vuelan hacia afuera
+      p.x+=p.vx; p.y+=p.vy; p.rot+=p.rotSpd; p.life-=p.decay;
+    } else {
+      // Fase 2 (frames 45→0): piezas regresan al centro con destello
+      const cx=player.x+player.w/2, cy=player.y+player.h/2;
+      p.vx+=(cx-p.x)*0.08; p.vy+=(cy-p.y)*0.08;
+      p.x+=p.vx; p.y+=p.vy; p.rot+=p.rotSpd*0.5;
+      p.life=Math.min(1,p.life+0.04);
+    }
+    if(p.life<=0 || upgradeAnim<=0) shipPieces.splice(i,1);
+  }
   Object.keys(activePowers).forEach(k=>{if(activePowers[k]>0)activePowers[k]--;});
   updatePowerUI();
 
