@@ -387,7 +387,6 @@ let reviveCount=0;
 let shipUpgraded=false;
 let upgradeAnim=0;
 let shipPieces=[];   // piezas que vuelan durante la transformación
-let bbOffset=0;
 
 function resize(){
   W = window.innerWidth;
@@ -580,7 +579,6 @@ function startGame(){
   shipUpgraded=false;
   upgradeAnim=0;
   shipPieces=[];
-  bbOffset=0;
 
   document.getElementById('hud').style.display='flex';
   document.getElementById('pauseBtn').style.display='flex';
@@ -842,49 +840,6 @@ function win(){
   },550);
 }
 
-// ===================== BILLBOARDS =====================
-const BILLBOARD_DEFS=[
-  {label:'ZonaTrialApp', sub:'zonatrial.app', color1:'#7c3aed', color2:'#4f46e5', accent:'#a78bfa', icon:'📲', yFrac:0.22},
-  {label:'Amin Inversor', sub:'aminInversor.com', color1:'#d97706', color2:'#b45309', accent:'#fbbf24', icon:'💹', yFrac:0.72}
-];
-const BB_W=260,BB_H=72,BB_GAP=700;
-function drawBillboards(){
-  const effSpeed=activePowers.slow>0?speed*0.35:speed;
-  bbOffset=(bbOffset+effSpeed*0.55)%(BB_GAP*BILLBOARD_DEFS.length);
-  BILLBOARD_DEFS.forEach((def,idx)=>{
-    const baseX=idx*BB_GAP-bbOffset;
-    for(let rep=-1;rep<=1;rep++){
-      const bx=baseX+rep*(BB_GAP*BILLBOARD_DEFS.length);
-      const by=H*def.yFrac-BB_H/2;
-      if(bx>W+BB_W+20||bx<-BB_W-20)continue;
-      ctx.save(); ctx.globalAlpha=0.82;
-      ctx.shadowColor='rgba(0,0,0,0.55)'; ctx.shadowBlur=16; ctx.shadowOffsetY=6;
-      const bg=ctx.createLinearGradient(bx,by,bx+BB_W,by+BB_H);
-      bg.addColorStop(0,def.color1+'ee'); bg.addColorStop(1,def.color2+'ee');
-      ctx.fillStyle=bg; ctx.beginPath(); ctx.roundRect(bx,by,BB_W,BB_H,10); ctx.fill();
-      ctx.shadowBlur=0; ctx.shadowOffsetY=0;
-      ctx.strokeStyle=def.accent; ctx.lineWidth=2.5;
-      ctx.beginPath(); ctx.roundRect(bx,by,BB_W,BB_H,10); ctx.stroke();
-      ctx.fillStyle=def.accent+'44'; ctx.beginPath(); ctx.roundRect(bx,by,8,BB_H,[10,0,0,10]); ctx.fill();
-      ctx.font='28px serif'; ctx.textAlign='left'; ctx.textBaseline='middle';
-      ctx.fillText(def.icon,bx+18,by+BB_H/2);
-      ctx.fillStyle='#ffffff'; ctx.font='bold 20px "Segoe UI",sans-serif';
-      ctx.textAlign='left'; ctx.textBaseline='middle';
-      ctx.shadowColor=def.accent; ctx.shadowBlur=8;
-      ctx.fillText(def.label,bx+56,by+BB_H*0.38); ctx.shadowBlur=0;
-      ctx.fillStyle=def.accent; ctx.font='11px "Segoe UI",sans-serif'; ctx.textBaseline='middle';
-      ctx.fillText(def.sub,bx+56,by+BB_H*0.70);
-      ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.roundRect(bx+BB_W-28,by+5,22,14,4); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='bold 8px "Segoe UI",sans-serif';
-      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('AD',bx+BB_W-17,by+12);
-      ctx.strokeStyle=def.accent+'66'; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.moveTo(bx+BB_W*0.28,by+BB_H); ctx.lineTo(bx+BB_W*0.28,by+BB_H+18); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(bx+BB_W*0.72,by+BB_H); ctx.lineTo(bx+BB_W*0.72,by+BB_H+18); ctx.stroke();
-      ctx.restore();
-    }
-  });
-}
-
 // ===================== RENDER =====================
 function render(){
   ctx.clearRect(0,0,W,H);
@@ -903,8 +858,6 @@ function render(){
   if(currentWorld.id===5){for(let i=0;i<5;i++){const dy=H*0.78+Math.sin(i)*H*0.05,dx=((i*300+frame*0.5)%W)-60;ctx.fillStyle='rgba(180,120,0,0.12)';ctx.beginPath();ctx.ellipse(dx,dy,140,30,0,0,Math.PI*2);ctx.fill();}}
   if(currentWorld.id===6){for(let i=0;i<12;i++){const bx=((i*157+frame*0.7)%W),by=H-(frame*0.8+i*40)%(H);ctx.strokeStyle='rgba(100,180,255,0.2)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(bx,by,4+i%4,0,Math.PI*2);ctx.stroke();}}
   if(currentWorld.id===7){if(frame%40<5){ctx.fillStyle='rgba(250,180,0,0.3)';ctx.fillRect(Math.random()*W,Math.random()*H,2,2);}}
-
-  drawBillboards();
 
   // Grid
   ctx.strokeStyle=currentWorld.color+'18'; ctx.lineWidth=1;
