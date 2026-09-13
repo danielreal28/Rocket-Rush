@@ -497,7 +497,7 @@ function getObstacleBBox(o){
 
 function spawnCoins(x){
   const pat=['line','arc','zigzag','scatter'][Math.floor(Math.random()*4)];
-  const count=4+Math.floor(Math.random()*3);
+  const count=3+Math.floor(Math.random()*2);
   const arr=[];
   for(let i=0;i<count;i++){
     let cy; const safeT=H*0.15,safeB=H*0.85;
@@ -505,7 +505,7 @@ function spawnCoins(x){
     else if(pat==='arc') cy=H/2+Math.sin(i/count*Math.PI)*H*0.28;
     else if(pat==='zigzag') cy=i%2===0?H*0.28:H*0.72;
     else cy=safeT+Math.random()*(safeB-safeT);
-    arr.push({x:x+i*55,y:cy,r:13,collected:false,anim:Math.random()*Math.PI*2});
+    arr.push({x:x+i*90,y:cy,r:13,collected:false,anim:Math.random()*Math.PI*2});
   }
   return arr;
 }
@@ -660,9 +660,9 @@ function update(){
     startMusicStyle2(currentWorld.musicNote, currentWorld.id);
   }
 
-  const spawnRate=Math.max(140,220-Math.floor(distance/100));
+  const spawnRate=Math.max(210,340-Math.floor(distance/100));
   if(frame%spawnRate===0) buildObstacle().forEach(o=>obstacles.push(o));
-  if(frame%75===38) spawnCoins(W+20).forEach(c=>coins.push(c));
+  if(frame%150===70) spawnCoins(W+20).forEach(c=>coins.push(c));
   if(frame%280===140) powerups.push(spawnPowerup(W+30));
 
   const magnetActive=activePowers.magnet>0;
